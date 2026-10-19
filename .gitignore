@@ -1,0 +1,14 @@
+# Build output
+app/build/
+app/*.apk
+app/*.apk.idsig
+
+# Third-party content: downloaded by tools/fetch_data.py, never committed (see README → Credits)
+app/assets/*.json
+app/assets/adhan/
+app/assets/.mca.pdf
+# Pexels photos, built by tools/photo_wallpapers.py
+app/assets/wallpapers/1[0-9]-*.jpg
+
+.DS_Store
+__pycache__/
