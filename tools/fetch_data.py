@@ -28,6 +28,7 @@ SAHIH_INTL = 20          # Quran.com translation id: Saheeh International
 IBN_KATHIR = 169         # Quran.com tafsir id: Ibn Kathir (abridged), English
 MASJIDAL_AUDIO = "https://masjidal.s3.us-east-2.amazonaws.com/audio"
 MCA_PDF = "https://mcabayarea.org/wp-content/uploads/2025/12/2026_MCA_Prayer_Time.pdf"
+HISN_API = "https://www.hisnmuslim.com/api"   # Hisn al-Muslim; chapter 25 = after the prayer
 HADITH_API = "https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-nawawi.json"
 BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"
 
@@ -207,6 +208,24 @@ def fetch_player(ch):
                                                         for n in ns]} for t, ns in PLAYER_GROUPS])
 
 
+def fetch_adhkar():
+    """Hisn al-Muslim, chapter 25: what to say after completing the prayer (Arabic + English)."""
+    def chapter(lang):
+        d = json.loads(curl(f"{HISN_API}/{lang}/25.json").decode("utf-8-sig"))
+        return next(iter(d.values()))
+    ar, en = chapter("ar"), chapter("en")
+    # Which prayers each entry is for (Hisn al-Muslim notes these in the text itself).
+    only = {72: ["Fajr", "Maghrib"], 73: ["Fajr"]}
+    out = []
+    for a, e in zip(ar, en):
+        n = int(e["ID"])
+        text_ar = a["ARABIC_TEXT"].strip()
+        text_ar = re.sub(r"^\(\(|\)\)\.?$", "", text_ar).replace("((", "").replace("))", "").strip()
+        out.append({"id": n, "ar": text_ar, "en": e["TRANSLATED_TEXT"].strip(),
+                    "repeat": int(e.get("REPEAT") or 1), "only": only.get(n, [])})
+    write("adhkar.json", out)
+
+
 def fetch_mca_schedule():
     """MCA's printed 2026 timetable -> {date: times}; the offline fallback for prayer times."""
     pdf = os.path.join(ASSETS, ".mca.pdf")
@@ -276,6 +295,8 @@ if __name__ == "__main__":
     fetch_player(ch)
     print("Hadith: Forty Hadith of Imam an-Nawawi")
     fetch_hadith()
+    print("Hisn al-Muslim: adhkar after the prayer")
+    fetch_adhkar()
     print("MCA: 2026 printed prayer schedule")
     fetch_mca_schedule()
     print("Masjidal: adhan recordings")

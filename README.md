@@ -20,10 +20,14 @@
   (Al-Haqqah, ayah by ayah), each labelled with the theme of its passage.
   The other slots rotate through a Quran verse, a hadith from Imam an-Nawawi's Forty Hadith, a dua
   from the Quran, and a Juz 'Amma ayah for review.
+- **After-prayer adhkar.** For 20 minutes after each iqamah, the screen steps through the adhkar to
+  say after the prayer (from *Hisn al-Muslim*), one at a time with its count, including the ones
+  that are only for Fajr or Maghrib.
 - **Quran player** for Al-Baqarah, Al-Kahf, Juz 29 and Juz 30, with four reciters, pause/resume, and
   automatic play-on to the next surah.
 - **App tiles** for Live TV, Quran, Apple TV, Netflix, YouTube, Hulu, Peacock and All apps.
 - **Keeps Google TV's "Live" tab** (free channels such as CBC News and Willow) one click away.
+- **Burn-in care:** every 3 minutes the whole layout eases a few pixels to a new position.
 - **Calm by design:** one large ayah or hadith at a time, one quiet source line, and a tone-on-tone
   Islamic geometric background that changes once a day (seven of them: one drawn here, six photos of
   real tilework and ceilings muted into the same teal-grey).
@@ -112,7 +116,8 @@ Requirements: Android SDK build-tools 36 and platform 36, JDK 11+, `adb`, Python
 5. Press Home on the remote.
 
 **To try the adhan without waiting:** `adb shell am broadcast -n com.home.launcher/.AdhanTestReceiver`
-(this only works from adb).
+(this only works from adb). **To preview the adhkar:**
+`adb shell am start -n com.home.launcher/.HomeActivity --ei adhkarTest 3` (3 = Asr; `-1` to stop).
 
 **To undo everything:** `adb shell settings delete secure enabled_accessibility_services`, then
 `adb uninstall com.home.launcher`. Google TV's home screen is untouched and comes straight back.
@@ -142,6 +147,8 @@ Please respect each source's terms.
   the printed 2026 timetable, and the public events calendar.
 - **[Quran.com](https://quran.com)** ([API](https://api-docs.quran.com/)): Quran text, the
   Saheeh International translation, *Tafsir Ibn Kathir (abridged)*, and surah metadata.
+- **[Hisn al-Muslim](https://www.hisnmuslim.com)** (Fortress of the Muslim) by Sa'id al-Qahtani: the
+  after-prayer adhkar (chapter 25, Arabic and English) via hisnmuslim.com's public API.
 - **[hadith-api](https://github.com/fawazahmed0/hadith-api)** by fawazahmed0: Forty Hadith of Imam an-Nawawi (English).
 - **[Amiri](https://github.com/aliftype/amiri)** by Khaled Hosny: Amiri Quran font,
   SIL Open Font License ([`OFL.txt`](app/assets/fonts/OFL.txt)). The font is included in the repo.

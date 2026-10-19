@@ -61,6 +61,10 @@ public class HomeActivity extends Activity {
     private LinearLayout strip;
     private FrameLayout textArea;
     private long renderedSlot = Long.MIN_VALUE;
+    private LinearLayout content;
+    private int lastShiftMinute = -1;
+    /** Adhkar are shown for this long after each iqamah. */
+    private static final int ADHKAR_MINUTES = 20, ADHKAR_SECONDS_EACH = 40;
     private FrameLayout root;
     private View adhanCard;
     private android.media.MediaPlayer adhanPlayer;
@@ -72,7 +76,8 @@ public class HomeActivity extends Activity {
         @Override
         public void run() {
             render(false);
-            ui.postDelayed(this, 15000);
+            drift();
+            ui.postDelayed(this, 5000);
         }
     };
 
@@ -235,6 +240,7 @@ public class HomeActivity extends Activity {
         }
 
         LinearLayout col = new LinearLayout(this);
+        content = col;
         col.setOrientation(LinearLayout.VERTICAL);
         col.setPadding(dp(56), dp(28), dp(56), dp(44));   // clear of TV overscan at the bottom
         root.addView(col, new FrameLayout.LayoutParams(-1, -1));
@@ -317,6 +323,19 @@ public class HomeActivity extends Activity {
             if (f != null) f.post(f::requestFocus);
         }
         return root;
+    }
+
+    /**
+     * Burn-in care: every 3 minutes the whole layout eases to a slightly different position
+     * (a few pixels), so nothing static sits on exactly the same pixels all day.
+     */
+    private void drift() {
+        int m = (int) (System.currentTimeMillis() / 60000);
+        if (content == null || m == lastShiftMinute || m % 3 != 0) return;
+        lastShiftMinute = m;
+        java.util.Random r = new java.util.Random(m);
+        content.animate().translationX(dp(r.nextInt(13) - 6)).translationY(dp(r.nextInt(9) - 4))
+                .setDuration(4000).start();
     }
 
     /** Long passages shrink to fit rather than being cut off at the tiles. */
@@ -440,8 +459,28 @@ public class HomeActivity extends Activity {
 
         int previewSlots = getIntent().getIntExtra("previewSlots", 0); // adb test hook
         long slot = Daily.slot(now) + previewSlots;
+        final long timeSlot = slot;
+
+        // For a while after each iqamah, show the after-prayer adhkar instead, one at a time.
+        int test = getIntent().getIntExtra("adhkarTest", -1);       // adb test hook: prayer index
+        int secs = mins * 60 + now.get(Calendar.SECOND);
+        View adhkarNext = null;
+        if (d != null) {
+            for (int i : new int[]{0, 2, 3, 4, 5}) {
+                int since = test == i ? 0 : secs - d.iqamah[i] * 60;
+                if (d.iqamah[i] < 0 || since < 0 || since >= ADHKAR_MINUTES * 60) continue;
+                String name = friday && i == 2 ? "Jumu'ah" : Prayer.NAMES[i];
+                java.util.List<org.json.JSONObject> list = daily.adhkarFor(Prayer.NAMES[i]);
+                if (list.isEmpty()) break;
+                int k = (since / ADHKAR_SECONDS_EACH) % list.size();
+                if (test == i) k = (int) ((System.currentTimeMillis() / 1000 / ADHKAR_SECONDS_EACH) % list.size());
+                slot = -1000L - i * 100L - k;                      // distinct key per adhkar card
+                if (full || slot != renderedSlot) adhkarNext = daily.adhkarView(list.get(k), name, k + 1, list.size());
+                break;
+            }
+        }
         if (full || slot != renderedSlot) {
-            View next = daily.view(slot, previewSlots != 0);
+            View next = adhkarNext != null ? adhkarNext : daily.view(slot, previewSlots != 0);
             View old = textArea.getChildCount() > 0 ? textArea.getChildAt(0) : null;
             next.setAlpha(old == null || full ? 1f : 0f);
             textArea.addView(next, new FrameLayout.LayoutParams(-1, -2, Gravity.CENTER));
@@ -459,7 +498,7 @@ public class HomeActivity extends Activity {
         }
 
         if (wallpapers.length > 0) {
-            int w = (int) Math.floorMod(Math.floorDiv(slot, Daily.SLOTS_PER_WALLPAPER), (long) wallpapers.length);
+            int w = (int) Math.floorMod(Math.floorDiv(timeSlot, Daily.SLOTS_PER_WALLPAPER), (long) wallpapers.length);
             if (w != shownWall) showWallpaper(w, shownWall < 0);
         }
 

@@ -36,7 +36,7 @@ public class Daily {
     private final SharedPreferences prefs;
     private JSONArray verses = new JSONArray(), hadith = new JSONArray(),
             duas = new JSONArray(), juzAmma = new JSONArray(), haqqah = new JSONArray(),
-            meanings = new JSONArray();
+            meanings = new JSONArray(), adhkar = new JSONArray();
     private Typeface quran;
 
     public Daily(HomeActivity a) {
@@ -49,6 +49,7 @@ public class Daily {
             juzAmma = new JSONArray(Prayer.readAll(a.getAssets().open("juz_amma.json")));
             haqqah = new JSONArray(Prayer.readAll(a.getAssets().open("haqqah.json")));
             meanings = new JSONArray(Prayer.readAll(a.getAssets().open("haqqah_meaning.json")));
+            adhkar = new JSONArray(Prayer.readAll(a.getAssets().open("adhkar.json")));
             quran = Typeface.createFromAsset(a.getAssets(), "fonts/AmiriQuran.ttf");
         } catch (Exception ignored) {
         }
@@ -138,6 +139,43 @@ public class Daily {
         col.addView(ref("Al-Haqqah " + ayah + (theme != null ? "  ·  " + theme : "")
                 + (previewAhead ? "  ·  coming up" : "")));
         return col;
+    }
+
+    /** After-prayer adhkar (Hisn al-Muslim) that apply to this prayer, in order. */
+    public java.util.List<JSONObject> adhkarFor(String prayer) {
+        java.util.List<JSONObject> out = new java.util.ArrayList<>();
+        for (int i = 0; i < adhkar.length(); i++) {
+            JSONObject x = adhkar.optJSONObject(i);
+            JSONArray only = x.optJSONArray("only");
+            boolean ok = only == null || only.length() == 0;
+            for (int j = 0; only != null && j < only.length(); j++) ok |= only.optString(j).equals(prayer);
+            if (ok) out.add(x);
+        }
+        return out;
+    }
+
+    public View adhkarView(JSONObject x, String prayer, int n, int total) {
+        LinearLayout box = new LinearLayout(a);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER_HORIZONTAL);
+        box.setPadding(a.dp(70), a.dp(4), a.dp(70), a.dp(8));
+        TextView head = a.text(13, HomeActivity.GOLD, "sans-serif-light");
+        head.setGravity(Gravity.CENTER);
+        head.setText("After " + prayer + " prayer  ·  " + n + " of " + total);
+        box.addView(head);
+        box.addView(arabic(x.optString("ar"), 30));
+        if (x.optInt("repeat", 1) > 1) {
+            TextView count = a.text(30, HomeActivity.GOLD, "sans-serif-light");
+            count.setGravity(Gravity.CENTER);
+            count.setPadding(0, a.dp(6), 0, 0);
+            count.setText("× " + x.optInt("repeat"));
+            box.addView(count);
+        }
+        // The Arabic is what's recited; very long translations are left off to keep the screen calm.
+        String en = x.optString("en").replaceAll("^\\(|\\)$", "").replace(")(", ") (");
+        if (en.length() <= 300) box.addView(english(en, 16));
+        box.addView(ref("Hisn al-Muslim, " + x.optInt("id")));
+        return box;
     }
 
     private static String quoted(String t) {
